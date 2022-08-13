@@ -29,11 +29,11 @@ const sqs = new SQSClient( {
 
 
 
-export async function failedDelivery( event: any, context: Context ): Promise<void> {
+export async function handler( event: any, context: Context ): Promise<void> {
     log.debug( event as any )
     log.debug( context as any )
 
-    if ( !DELIVERY_BUCKET || !FAILURE_BUCKET || DL_QUEUE_URL ) {
+    if ( !DELIVERY_BUCKET || !FAILURE_BUCKET || !DL_QUEUE_URL ) {
         throw new Error( 'Missing required environment variables' )
     }
 

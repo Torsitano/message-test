@@ -1,0 +1,196 @@
+{
+  "version": "20.0.0",
+  "artifacts": {
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    },
+    "MessageStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "MessageStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "MessageStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://698852667105/us-east-1",
+      "properties": {
+        "templateFile": "MessageStack.template.json",
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::698852667105:role/cdk-hnb659fds-deploy-role-698852667105-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::698852667105:role/cdk-hnb659fds-cfn-exec-role-698852667105-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-698852667105-us-east-1/4d12f55ab9ce1535faf58a2052b22bd63c4601e7c075e99b6fefc9b4ce1dd197.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "MessageStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::698852667105:role/cdk-hnb659fds-lookup-role-698852667105-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "MessageStack.assets"
+      ],
+      "metadata": {
+        "/MessageStack/MessageDeployment/S3Cmk/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentS3Cmk41AE5F10"
+          }
+        ],
+        "/MessageStack/MessageDeployment/S3Cmk/Alias/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentS3CmkAlias4E6C80C0"
+          }
+        ],
+        "/MessageStack/MessageDeployment/SqsCmk/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentSqsCmk394754B5"
+          }
+        ],
+        "/MessageStack/MessageDeployment/SqsCmk/Alias/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentSqsCmkAlias1D17AABC"
+          }
+        ],
+        "/MessageStack/MessageDeployment/DLQueue/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentDLQueue400EAAE3"
+          }
+        ],
+        "/MessageStack/MessageDeployment/MessageQueue/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentMessageQueue9458F997"
+          }
+        ],
+        "/MessageStack/MessageDeployment/MessageQueue/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentMessageQueuePolicyDCF39534"
+          }
+        ],
+        "/MessageStack/MessageDeployment/DeliveryBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentDeliveryBucket87563450"
+          }
+        ],
+        "/MessageStack/MessageDeployment/DeliveryBucket/Notifications/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentDeliveryBucketNotifications839F1494"
+          }
+        ],
+        "/MessageStack/MessageDeployment/FailureBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentFailureBucket58A5A2BF"
+          }
+        ],
+        "/MessageStack/MessageDeployment/processingLambda/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentprocessingLambdaServiceRole4F1811B7"
+          }
+        ],
+        "/MessageStack/MessageDeployment/processingLambda/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentprocessingLambdaServiceRoleDefaultPolicyD7AA761F"
+          }
+        ],
+        "/MessageStack/MessageDeployment/processingLambda/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentprocessingLambda10B08402"
+          }
+        ],
+        "/MessageStack/MessageDeployment/processingLambda/SqsEventSource:MessageStackMessageDeploymentMessageQueueB6CB5BFB/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentprocessingLambdaSqsEventSourceMessageStackMessageDeploymentMessageQueueB6CB5BFB9B7524D9"
+          }
+        ],
+        "/MessageStack/MessageDeployment/failureLambda/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentfailureLambdaServiceRole13854892"
+          }
+        ],
+        "/MessageStack/MessageDeployment/failureLambda/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentfailureLambdaServiceRoleDefaultPolicyA3C3F306"
+          }
+        ],
+        "/MessageStack/MessageDeployment/failureLambda/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentfailureLambdaD0E67AE3"
+          }
+        ],
+        "/MessageStack/MessageDeployment/FailureLambdaTrigger/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentFailureLambdaTriggerC7C1B123"
+          }
+        ],
+        "/MessageStack/MessageDeployment/FailureLambdaTrigger/AllowEventRuleMessageStackMessageDeploymentfailureLambdaF503FD27": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessageDeploymentFailureLambdaTriggerAllowEventRuleMessageStackMessageDeploymentfailureLambdaF503FD2704791BC0"
+          }
+        ],
+        "/MessageStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC"
+          }
+        ],
+        "/MessageStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36"
+          }
+        ],
+        "/MessageStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691"
+          }
+        ],
+        "/MessageStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/MessageStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/MessageStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "MessageStack"
+    }
+  }
+}

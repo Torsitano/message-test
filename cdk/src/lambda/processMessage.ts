@@ -21,7 +21,7 @@ const log = new LambdaLog( {
 
 
 
-export async function processMessage( event: S3ObjectCreatedNotificationEvent, context: Context ): Promise<void> {
+export async function handler( event: S3ObjectCreatedNotificationEvent, context: Context ): Promise<void> {
 
     log.debug( event as any )
     log.debug( context as any )
