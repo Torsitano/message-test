@@ -10,7 +10,7 @@ The following resources are created by the custom construct:
 
 -   **Delivery Bucket**: An S3 Bucket that new objects are uploaded to for processing
 -   **Message Queue**: An SQS Queue that receives the upload events from the Delivery Bucket
--   A standard SQS Queue is used, so the processing logic needs to handle the potential for duplicate and/or out of order messages
+-   -   A standard SQS Queue is used, so the processing logic needs to handle the potential for duplicate and/or out of order messages
 -   **Processing Lambda**: Triggered by messages in the Message Queue
 -   **DL Queue**: Receives messages from the Message Queue that fail to be processed by the Processing Lambda
 -   **Failure Lambda**: Polls the DL Queue on a schedule for messages to handle objects that could not be processed
