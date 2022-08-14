@@ -62,13 +62,13 @@ export class CustomMessageConstruct extends Construct {
         this.s3Cmk = new Key( this, 'S3Cmk', {
             ...defaultKmsConfig,
             alias: `${props.appName}S3Cmk`,
-            description: 'KMS CMK used for message queue test'
+            description: 'KMS CMK used for message queue'
         } )
 
         this.sqsCmk = new Key( this, 'SqsCmk', {
             ...defaultKmsConfig,
             alias: `${props.appName}SqsCmk`,
-            description: 'KMS CMK used for message queue test'
+            description: 'KMS CMK used for DL queue'
         } )
 
 
