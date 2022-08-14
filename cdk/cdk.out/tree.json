@@ -75,7 +75,7 @@
                         "attributes": {
                           "aws:cdk:cloudformation:type": "AWS::KMS::Alias",
                           "aws:cdk:cloudformation:props": {
-                            "aliasName": "alias/message-testS3Cmk",
+                            "aliasName": "alias/MessageTestS3Cmk",
                             "targetKeyId": {
                               "Fn::GetAtt": [
                                 "MessageDeploymentS3Cmk41AE5F10",
@@ -190,7 +190,7 @@
                         "attributes": {
                           "aws:cdk:cloudformation:type": "AWS::KMS::Alias",
                           "aws:cdk:cloudformation:props": {
-                            "aliasName": "alias/message-testSqsCmk",
+                            "aliasName": "alias/MessageTestSqsCmk",
                             "targetKeyId": {
                               "Fn::GetAtt": [
                                 "MessageDeploymentSqsCmk394754B5",
@@ -233,7 +233,7 @@
                           ]
                         },
                         "messageRetentionPeriod": 21600,
-                        "queueName": "message-testDLQueueProd"
+                        "queueName": "MessageTestDLQueueProd"
                       }
                     },
                     "constructInfo": {
@@ -263,7 +263,7 @@
                             "Arn"
                           ]
                         },
-                        "queueName": "message-testMessageQueueProd",
+                        "queueName": "MessageTestMessageQueueProd",
                         "redrivePolicy": {
                           "deadLetterTargetArn": {
                             "Fn::GetAtt": [
@@ -373,7 +373,7 @@
                             }
                           ]
                         },
-                        "bucketName": "message-test-delivery-bucket-prod-698852667105",
+                        "bucketName": "messagetest-delivery-bucket-prod-698852667105",
                         "publicAccessBlockConfiguration": {
                           "blockPublicAcls": true,
                           "blockPublicPolicy": true,
@@ -437,7 +437,7 @@
                             }
                           ]
                         },
-                        "bucketName": "message-test-failed-delivery-bucket-prod-698852667105",
+                        "bucketName": "messagetest-failed-delivery-bucket-prod-698852667105",
                         "publicAccessBlockConfiguration": {
                           "blockPublicAcls": true,
                           "blockPublicPolicy": true,
@@ -674,11 +674,11 @@
                             "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1"
                           }
                         },
-                        "functionName": "message-test-processing-lambda",
+                        "functionName": "MessageTestProcessingLambda",
                         "handler": "index.handler",
-                        "memorySize": 128,
+                        "memorySize": 256,
                         "runtime": "nodejs16.x",
-                        "timeout": 30
+                        "timeout": 60
                       }
                     },
                     "constructInfo": {
@@ -786,9 +786,16 @@
                                   "Statement": [
                                     {
                                       "Action": [
+                                        "s3:Abort*",
+                                        "s3:DeleteObject*",
                                         "s3:GetBucket*",
                                         "s3:GetObject*",
-                                        "s3:List*"
+                                        "s3:List*",
+                                        "s3:PutObject",
+                                        "s3:PutObjectLegalHold",
+                                        "s3:PutObjectRetention",
+                                        "s3:PutObjectTagging",
+                                        "s3:PutObjectVersionTagging"
                                       ],
                                       "Effect": "Allow",
                                       "Resource": [
@@ -799,12 +806,32 @@
                                           ]
                                         },
                                         {
+                                          "Fn::GetAtt": [
+                                            "MessageDeploymentFailureBucket58A5A2BF",
+                                            "Arn"
+                                          ]
+                                        },
+                                        {
                                           "Fn::Join": [
                                             "",
                                             [
                                               {
                                                 "Fn::GetAtt": [
                                                   "MessageDeploymentDeliveryBucket87563450",
+                                                  "Arn"
+                                                ]
+                                              },
+                                              "/*"
+                                            ]
+                                          ]
+                                        },
+                                        {
+                                          "Fn::Join": [
+                                            "",
+                                            [
+                                              {
+                                                "Fn::GetAtt": [
+                                                  "MessageDeploymentFailureBucket58A5A2BF",
                                                   "Arn"
                                                 ]
                                               },
@@ -829,43 +856,6 @@
                                           "Arn"
                                         ]
                                       }
-                                    },
-                                    {
-                                      "Action": [
-                                        "s3:Abort*",
-                                        "s3:DeleteObject*",
-                                        "s3:GetBucket*",
-                                        "s3:GetObject*",
-                                        "s3:List*",
-                                        "s3:PutObject",
-                                        "s3:PutObjectLegalHold",
-                                        "s3:PutObjectRetention",
-                                        "s3:PutObjectTagging",
-                                        "s3:PutObjectVersionTagging"
-                                      ],
-                                      "Effect": "Allow",
-                                      "Resource": [
-                                        {
-                                          "Fn::GetAtt": [
-                                            "MessageDeploymentFailureBucket58A5A2BF",
-                                            "Arn"
-                                          ]
-                                        },
-                                        {
-                                          "Fn::Join": [
-                                            "",
-                                            [
-                                              {
-                                                "Fn::GetAtt": [
-                                                  "MessageDeploymentFailureBucket58A5A2BF",
-                                                  "Arn"
-                                                ]
-                                              },
-                                              "/*"
-                                            ]
-                                          ]
-                                        }
-                                      ]
                                     },
                                     {
                                       "Action": [
@@ -960,7 +950,7 @@
                       "aws:cdk:cloudformation:props": {
                         "code": {
                           "s3Bucket": "cdk-hnb659fds-assets-698852667105-us-east-1",
-                          "s3Key": "b7dcb33ce847c46ecc6469a4adb7c20a09e3537c8524b07bc26f244304df45e9.zip"
+                          "s3Key": "9e4bc3a7024f8bbc6e951357120fedd4f44a572dfffcfb7c5c592a1f4a14b089.zip"
                         },
                         "role": {
                           "Fn::GetAtt": [
@@ -985,7 +975,7 @@
                             "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1"
                           }
                         },
-                        "functionName": "message-test-failure-lambda",
+                        "functionName": "MessageTestFailureLambda",
                         "handler": "index.handler",
                         "memorySize": 128,
                         "runtime": "nodejs16.x",
@@ -1014,7 +1004,7 @@
                       "aws:cdk:cloudformation:type": "AWS::Events::Rule",
                       "aws:cdk:cloudformation:props": {
                         "description": "Triggers the failure lambda hourly to get messages from the failure queue",
-                        "name": "message-testFailureTrigger",
+                        "name": "MessageTestFailureTrigger",
                         "scheduleExpression": "rate(1 hour)",
                         "state": "ENABLED",
                         "targets": [

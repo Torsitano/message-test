@@ -36,7 +36,7 @@
             "AwsAccountId": "698852667105",
             "Environment": "Prod",
             "Region": "us-east-1",
-            "AppName": "message-test"
+            "AppName": "MessageTest"
         }
     }
 }

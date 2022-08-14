@@ -1,5 +1,5 @@
 import { Construct } from 'constructs'
-import { Duration } from 'aws-cdk-lib'
+import { Duration, RemovalPolicy } from 'aws-cdk-lib'
 import { Key } from 'aws-cdk-lib/aws-kms'
 import { BlockPublicAccess, Bucket, BucketEncryption, BucketProps } from 'aws-cdk-lib/aws-s3'
 import { Queue, QueueEncryption, QueueProps } from 'aws-cdk-lib/aws-sqs'
@@ -20,13 +20,17 @@ export interface MessageConstructProps {
      */
     appName: string,
     /**
-     * 
+     * The location of the code for the processing Lambda
      */
     processingLambdaCode: string,
     /**
      * 
      */
-    awsAccountId: string
+    awsAccountId: string,
+    /**
+     * Allows setting config options like timeout and memory size
+     */
+    lambdaOverrides: Partial<NodejsFunctionProps>
 }
 
 /**
@@ -43,7 +47,8 @@ export class CustomMessageConstruct extends Construct {
             enabled: true,
             enableKeyRotation: true,
             pendingWindow: Duration.days( 7 ),
-            description: 'KMS CMK used for message queue test'
+            description: 'KMS CMK used for message queue test',
+            removalPolicy: RemovalPolicy.DESTROY
         } )
 
         const sqsCmk = new Key( this, 'SqsCmk', {
@@ -51,7 +56,8 @@ export class CustomMessageConstruct extends Construct {
             enabled: true,
             enableKeyRotation: true,
             pendingWindow: Duration.days( 7 ),
-            description: 'KMS CMK used for message queue test'
+            description: 'KMS CMK used for message queue test',
+            removalPolicy: RemovalPolicy.DESTROY
         } )
 
 
@@ -101,8 +107,6 @@ export class CustomMessageConstruct extends Construct {
             new SqsDestination( messageQueue )
         )
 
-
-
         const failureBucket = new Bucket( this, 'FailureBucket', {
             ...defaultBucketConfig,
             bucketName: ( `${props.appName}-failed-delivery-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase(),
@@ -119,11 +123,12 @@ export class CustomMessageConstruct extends Construct {
             timeout: Duration.seconds( 30 )
         }
 
-        // Increase memory and timeout as required for process
+        // This would need better logic for a real deployment instead of just merging a bunch of stuff with spread
         const processingLambda = new NodejsFunction( this, 'processingLambda', {
             ...lambdaDefaults,
+            ...props.lambdaOverrides,
             entry: props.processingLambdaCode,
-            functionName: `${props.appName}-processing-lambda`,
+            functionName: `${props.appName}ProcessingLambda`,
             description: 'Processes objects put into the S3 Bucket for inbound payloads',
             environment: {
                 DEBUG_LOGS: 'true',
@@ -145,7 +150,7 @@ export class CustomMessageConstruct extends Construct {
         const failureLambda = new NodejsFunction( this, 'failureLambda', {
             ...lambdaDefaults,
             entry: './src/lambda/failedDelivery.ts',
-            functionName: `${props.appName}-failure-lambda`,
+            functionName: `${props.appName}FailureLambda`,
             description: 'Polls the failed queue to put S3 Objects into the failed Bucket for follow-up',
             environment: {
                 DL_QUEUE_URL: dlQueue.queueUrl,
@@ -156,7 +161,8 @@ export class CustomMessageConstruct extends Construct {
             }
         } )
 
-        deliveryBucket.grantRead( failureLambda.role! )
+        // Granting permissions to the Failure Lambda IAM Role
+        deliveryBucket.grantReadWrite( failureLambda.role! )
         failureBucket.grantReadWrite( failureLambda.role! )
         s3Cmk.grantEncryptDecrypt( failureLambda.role! )
         sqsCmk.grantEncryptDecrypt( failureLambda.role! )
@@ -170,13 +176,6 @@ export class CustomMessageConstruct extends Construct {
         } )
 
         failureEventRule.addTarget( new LambdaFunction( failureLambda ) )
-
-
-
-
-
-
-
 
     }
 }
