@@ -1005,7 +1005,7 @@
                       "aws:cdk:cloudformation:props": {
                         "description": "Triggers the failure lambda hourly to get messages from the failure queue",
                         "name": "MessageTestFailureTrigger",
-                        "scheduleExpression": "rate(1 hour)",
+                        "scheduleExpression": "rate(1 minute)",
                         "state": "ENABLED",
                         "targets": [
                           {
