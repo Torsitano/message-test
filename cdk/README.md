@@ -8,20 +8,20 @@ The `MessageConstruct.ts` file in `lib/constructs` provides the deployment in a 
 
 The following resources are created by the custom construct:
 
-- **Delivery Bucket**: An S3 Bucket that new objects are uploaded to for processing
-- **Message Queue**: An SQS Queue that receives the upload events from the Delivery Bucket
+- **Delivery Bucket** - An S3 Bucket that new objects are uploaded to for processing
+- **Message Queue** - An SQS Queue that receives the upload events from the Delivery Bucket
   - A standard SQS Queue is used, so the processing logic needs to handle the potential for duplicate and/or out of order messages
-- **Processing Lambda**: Triggered by messages in the Message Queue
-- **DL Queue**: Receives messages from the Message Queue that fail to be processed by the Processing Lambda
-- **Failure Lambda**: Polls the DL Queue on a schedule for messages to handle objects that could not be processed
-- **Failure Bucket**: Holds objects that could not be processed for follow-up
-- **KMS CMKs**: Used to encrypt data in S3 and SQS
+- **Processing Lambda** - Triggered by messages in the Message Queue
+- **DL Queue** - Receives messages from the Message Queue that fail to be processed by the Processing Lambda
+- **Failure Lambda** - Polls the DL Queue on a schedule for messages to handle objects that could not be processed
+- **Failure Bucket** - Holds objects that could not be processed for follow-up
+- **KMS CMKs** - Used to encrypt data in S3 and SQS
 
 ## Workflow
 
 The primary purpose of this design is to process new objects uploaded to an S3 Bucket. When an object is uploaded, a message is sent to the Message Queue with information about the S3 object.
 
-The Message Queue triggers the Processing Lambda(using a custom constuct provided in CDK through[SqsEventSource](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_event_sources.SqsEventSource.html)), which will attempt to process the object.
+The Message Queue triggers the Processing Lambda(using a custom constuct provided in CDK through [SqsEventSource](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_event_sources.SqsEventSource.html)), which will attempt to process the object.
 
 If the Processing Lambda fails 3 times, the Message Queue sends the message over to the DL Queue. The Failure Lambda runs on a scheduled basis as a cleanup function, and will check the DL Queue for messages. If it finds any, it copies the object to the Failure Bucket, deletes the object from the Delivery Bucket, and deletes the message from the DL Queue.
 
