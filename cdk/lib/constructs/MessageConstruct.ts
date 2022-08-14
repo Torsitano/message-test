@@ -1,6 +1,6 @@
 import { Construct } from 'constructs'
 import { Duration, RemovalPolicy } from 'aws-cdk-lib'
-import { Key } from 'aws-cdk-lib/aws-kms'
+import { Key, KeyProps } from 'aws-cdk-lib/aws-kms'
 import { BlockPublicAccess, Bucket, BucketEncryption, BucketProps } from 'aws-cdk-lib/aws-s3'
 import { Queue, QueueEncryption, QueueProps } from 'aws-cdk-lib/aws-sqs'
 import { SqsDestination } from 'aws-cdk-lib/aws-s3-notifications'
@@ -51,23 +51,24 @@ export class CustomMessageConstruct extends Construct {
         super( scope, id )
 
 
-        // Create the CMK used to encrypt all resources this deploys
-        this.s3Cmk = new Key( this, 'S3Cmk', {
-            alias: `${props.appName}S3Cmk`,
+        const defaultKmsConfig: Partial<KeyProps> = {
             enabled: true,
             enableKeyRotation: true,
             pendingWindow: Duration.days( 7 ),
-            description: 'KMS CMK used for message queue test',
             removalPolicy: RemovalPolicy.DESTROY
+        }
+
+        // Create the CMK used to encrypt all resources this deploys
+        this.s3Cmk = new Key( this, 'S3Cmk', {
+            ...defaultKmsConfig,
+            alias: `${props.appName}S3Cmk`,
+            description: 'KMS CMK used for message queue test'
         } )
 
         this.sqsCmk = new Key( this, 'SqsCmk', {
+            ...defaultKmsConfig,
             alias: `${props.appName}SqsCmk`,
-            enabled: true,
-            enableKeyRotation: true,
-            pendingWindow: Duration.days( 7 ),
-            description: 'KMS CMK used for message queue test',
-            removalPolicy: RemovalPolicy.DESTROY
+            description: 'KMS CMK used for message queue test'
         } )
 
 
