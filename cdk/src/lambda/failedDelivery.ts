@@ -1,4 +1,4 @@
-import { ReceiveMessageCommand, SQSClient, Message } from '@aws-sdk/client-sqs'
+import { ReceiveMessageCommand, SQSClient, Message, DeleteMessageCommand } from '@aws-sdk/client-sqs'
 import { Context } from 'aws-lambda'
 import { LambdaLog } from 'lambda-log'
 
@@ -37,14 +37,17 @@ export async function handler( event: any, context: Context ): Promise<void> {
         throw new Error( 'Missing required environment variables' )
     }
 
-    const messages = await receiveMessages()
+    let messages = await receiveMessages()
 
     while ( messages.Messages ) {
         const messageList = messages.Messages
 
-        await Promise.all( messageList.map( ( message: Message ): void => {
+        await Promise.all( messageList.map( async ( message: Message ): Promise<void> => {
             log.debug( message as any )
+            await deleteMessage( message )
         } ) )
+
+        messages = await receiveMessages()
     }
 
 
@@ -59,5 +62,14 @@ async function receiveMessages() {
         MaxNumberOfMessages: 10
     } )
 
-    return sqs.send( command )
+    return await sqs.send( command )
+}
+
+async function deleteMessage( message: Message ): Promise<void> {
+    const command = new DeleteMessageCommand( {
+        QueueUrl: DL_QUEUE_URL,
+        ReceiptHandle: message.ReceiptHandle
+    } )
+
+    await sqs.send( command )
 }

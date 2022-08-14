@@ -694,7 +694,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-698852667105-us-east-1",
-     "S3Key": "2b67702f31d1a1928a65484cced6ad2311231f8dae2f9a0b4ca4a304169aac53.zip"
+     "S3Key": "b7dcb33ce847c46ecc6469a4adb7c20a09e3537c8524b07bc26f244304df45e9.zip"
     },
     "Role": {
      "Fn::GetAtt": [
@@ -731,7 +731,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "MessageStack/MessageDeployment/failureLambda/Resource",
-    "aws:asset:path": "asset.2b67702f31d1a1928a65484cced6ad2311231f8dae2f9a0b4ca4a304169aac53",
+    "aws:asset:path": "asset.b7dcb33ce847c46ecc6469a4adb7c20a09e3537c8524b07bc26f244304df45e9",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
