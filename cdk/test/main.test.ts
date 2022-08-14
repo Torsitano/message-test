@@ -1,34 +1,12 @@
 import { BuildConfig } from './../lib/buildUtils'
 import { Template } from 'aws-cdk-lib/assertions'
-import { App, CfnElement, Duration, IResource, Stack, StackProps } from 'aws-cdk-lib'
-import { CustomMessageConstruct } from '../lib/constructs/MessageConstruct'
-import { Construct } from 'constructs'
+import { App, CfnElement, IResource, Stack } from 'aws-cdk-lib'
+import { MessageStack } from '../lib/stacks/MessageStack'
 
 
 
 function getLogicalId( stack: Stack, resource: IResource ) {
     return stack.getLogicalId( resource.node.findChild( 'Resource' ) as CfnElement )
-}
-
-
-export class TestMessageStack extends Stack {
-    readonly messageConstruct: CustomMessageConstruct
-
-    constructor ( scope: Construct, id: string, buildConfig: BuildConfig, props?: StackProps ) {
-        super( scope, id, props )
-
-        this.messageConstruct = new CustomMessageConstruct( this, 'MessageDeployment', {
-            environment: buildConfig.environment,
-            appName: buildConfig.appName,
-            processingLambdaCode: './src/lambda/processMessage.ts',
-            awsAccountId: buildConfig.awsAccountId,
-            lambdaOverrides: {
-                memorySize: 256,
-                timeout: Duration.seconds( 60 )
-            }
-        } )
-
-    }
 }
 
 
@@ -42,7 +20,7 @@ describe( 'MessageStack', () => {
         appName: 'MessageTest'
     }
 
-    const stack = new TestMessageStack( app, 'MessageStack', buildConfig, {
+    const stack = new MessageStack( app, 'MessageStack', buildConfig, {
         env: {
             account: buildConfig.awsAccountId,
             region: buildConfig.region

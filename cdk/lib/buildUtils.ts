@@ -8,7 +8,7 @@ export interface BuildConfig {
 }
 
 
-export function getBuildConfig( app: cdk.App ) {
+export function getBuildConfig( app: cdk.App ): BuildConfig {
     let env = app.node.tryGetContext( 'config' )
     if ( !env ) {
         throw new Error( 'Missing context variable, pass in `-c config=xxx`' )

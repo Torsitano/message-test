@@ -6,10 +6,12 @@ import { BuildConfig } from '../buildUtils'
 
 
 export class MessageStack extends Stack {
+    readonly messageConstruct: CustomMessageConstruct
+
     constructor ( scope: Construct, id: string, buildConfig: BuildConfig, props?: StackProps ) {
         super( scope, id, props )
 
-        new CustomMessageConstruct( this, 'MessageDeployment', {
+        this.messageConstruct = new CustomMessageConstruct( this, 'MessageDeployment', {
             environment: buildConfig.environment,
             appName: buildConfig.appName,
             processingLambdaCode: './src/lambda/processMessage.ts',
