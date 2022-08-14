@@ -53,3 +53,9 @@ cdk deploy -c config=prod
 ```
 
 # Testing
+
+Testing is done with Jest. To execute the test suite, run:
+
+```shell
+npm run test
+```

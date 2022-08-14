@@ -37,12 +37,22 @@ export interface MessageConstructProps {
  * 
  */
 export class CustomMessageConstruct extends Construct {
+    readonly s3Cmk: Key
+    readonly sqsCmk: Key
+    readonly messageQueue: Queue
+    readonly dlQueue: Queue
+    readonly deliveryBucket: Bucket
+    readonly failureBucket: Bucket
+    readonly processingLambda: NodejsFunction
+    readonly failureLambda: NodejsFunction
+    readonly failureEventRule: Rule
+
     constructor ( scope: Construct, id: string, props: MessageConstructProps ) {
         super( scope, id )
 
 
         // Create the CMK used to encrypt all resources this deploys
-        const s3Cmk = new Key( this, 'S3Cmk', {
+        this.s3Cmk = new Key( this, 'S3Cmk', {
             alias: `${props.appName}S3Cmk`,
             enabled: true,
             enableKeyRotation: true,
@@ -51,7 +61,7 @@ export class CustomMessageConstruct extends Construct {
             removalPolicy: RemovalPolicy.DESTROY
         } )
 
-        const sqsCmk = new Key( this, 'SqsCmk', {
+        this.sqsCmk = new Key( this, 'SqsCmk', {
             alias: `${props.appName}SqsCmk`,
             enabled: true,
             enableKeyRotation: true,
@@ -64,23 +74,22 @@ export class CustomMessageConstruct extends Construct {
         // Setup default config shared by the SQS Queues
         const defaultQueueConfig: Partial<QueueProps> = {
             encryption: QueueEncryption.KMS,
-            encryptionMasterKey: sqsCmk,
+            encryptionMasterKey: this.sqsCmk,
         }
 
 
         // Create both the DL and processing message queues
-        const dlQueue = new Queue( this, 'DLQueue', {
+        this.dlQueue = new Queue( this, 'DLQueue', {
             ...defaultQueueConfig,
             queueName: `${props.appName}DLQueue${props.environment}`,
             retentionPeriod: Duration.seconds( 21600 )
         } )
 
-        //@ts-ignore
-        const messageQueue = new Queue( this, 'MessageQueue', {
+        this.messageQueue = new Queue( this, 'MessageQueue', {
             ...defaultQueueConfig,
             queueName: `${props.appName}MessageQueue${props.environment}`,
             deadLetterQueue: {
-                queue: dlQueue,
+                queue: this.dlQueue,
                 maxReceiveCount: 3
             },
             // Set visibility timeout to the timeout of the processing function + 30 seconds
@@ -91,23 +100,23 @@ export class CustomMessageConstruct extends Construct {
         // Setup the default S3 config used by both Buckets
         const defaultBucketConfig: Partial<BucketProps> = {
             encryption: BucketEncryption.KMS,
-            encryptionKey: s3Cmk,
+            encryptionKey: this.s3Cmk,
             bucketKeyEnabled: true,
             blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
         }
 
         // The Bucket names are lower cased to ensure whatever is passed will be allowed for S3 naming standards
-        const deliveryBucket = new Bucket( this, 'DeliveryBucket', {
+        this.deliveryBucket = new Bucket( this, 'DeliveryBucket', {
             ...defaultBucketConfig,
             bucketName: ( `${props.appName}-delivery-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase()
         } )
 
         // Send messages to SQS when an object is created in the S3 Bucket
-        deliveryBucket.addObjectCreatedNotification(
-            new SqsDestination( messageQueue )
+        this.deliveryBucket.addObjectCreatedNotification(
+            new SqsDestination( this.messageQueue )
         )
 
-        const failureBucket = new Bucket( this, 'FailureBucket', {
+        this.failureBucket = new Bucket( this, 'FailureBucket', {
             ...defaultBucketConfig,
             bucketName: ( `${props.appName}-failed-delivery-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase(),
         } )
@@ -124,7 +133,7 @@ export class CustomMessageConstruct extends Construct {
         }
 
         // This would need better logic for a real deployment instead of just merging a bunch of stuff with spread
-        const processingLambda = new NodejsFunction( this, 'processingLambda', {
+        this.processingLambda = new NodejsFunction( this, 'processingLambda', {
             ...lambdaDefaults,
             ...props.lambdaOverrides,
             entry: props.processingLambdaCode,
@@ -133,49 +142,49 @@ export class CustomMessageConstruct extends Construct {
             environment: {
                 DEBUG_LOGS: 'true',
                 FAILURE_TEST: 'true',
-                DELIVERY_BUCKET: deliveryBucket.bucketName
+                DELIVERY_BUCKET: this.deliveryBucket.bucketName
             }
         } )
 
-        processingLambda.addEventSource( new SqsEventSource( messageQueue, {
+        this.processingLambda.addEventSource( new SqsEventSource( this.messageQueue, {
             batchSize: 1
         } ) )
 
         // Granting permissions to the Processing Lambda IAM Role
-        deliveryBucket.grantRead( processingLambda.role! )
-        s3Cmk.grantEncryptDecrypt( processingLambda.role! )
-        sqsCmk.grantEncryptDecrypt( processingLambda.role! )
-        messageQueue.grantConsumeMessages( processingLambda.role! )
+        this.deliveryBucket.grantRead( this.processingLambda.role! )
+        this.s3Cmk.grantEncryptDecrypt( this.processingLambda.role! )
+        this.sqsCmk.grantEncryptDecrypt( this.processingLambda.role! )
+        this.messageQueue.grantConsumeMessages( this.processingLambda.role! )
 
-        const failureLambda = new NodejsFunction( this, 'failureLambda', {
+        this.failureLambda = new NodejsFunction( this, 'failureLambda', {
             ...lambdaDefaults,
             entry: './src/lambda/failedDelivery.ts',
             functionName: `${props.appName}FailureLambda`,
             description: 'Polls the failed queue to put S3 Objects into the failed Bucket for follow-up',
             environment: {
-                DL_QUEUE_URL: dlQueue.queueUrl,
-                FAILURE_BUCKET: failureBucket.bucketName,
+                DL_QUEUE_URL: this.dlQueue.queueUrl,
+                FAILURE_BUCKET: this.failureBucket.bucketName,
                 DEBUG_LOGS: 'true',
-                DELIVERY_BUCKET: deliveryBucket.bucketName,
+                DELIVERY_BUCKET: this.deliveryBucket.bucketName,
                 REGION: 'us-east-1'
             }
         } )
 
         // Granting permissions to the Failure Lambda IAM Role
-        deliveryBucket.grantReadWrite( failureLambda.role! )
-        failureBucket.grantReadWrite( failureLambda.role! )
-        s3Cmk.grantEncryptDecrypt( failureLambda.role! )
-        sqsCmk.grantEncryptDecrypt( failureLambda.role! )
-        dlQueue.grantConsumeMessages( failureLambda.role! )
+        this.deliveryBucket.grantReadWrite( this.failureLambda.role! )
+        this.failureBucket.grantReadWrite( this.failureLambda.role! )
+        this.s3Cmk.grantEncryptDecrypt( this.failureLambda.role! )
+        this.sqsCmk.grantEncryptDecrypt( this.failureLambda.role! )
+        this.dlQueue.grantConsumeMessages( this.failureLambda.role! )
 
         // Creates an Event Rule that triggers hourly to pull messages from the failure queue
-        const failureEventRule = new Rule( this, 'FailureLambdaTrigger', {
+        this.failureEventRule = new Rule( this, 'FailureLambdaTrigger', {
             ruleName: `${props.appName}FailureTrigger`,
             description: 'Triggers the failure lambda hourly to get messages from the failure queue',
             schedule: Schedule.rate( Duration.minutes( 1 ) )
         } )
 
-        failureEventRule.addTarget( new LambdaFunction( failureLambda ) )
+        this.failureEventRule.addTarget( new LambdaFunction( this.failureLambda ) )
 
     }
 }
