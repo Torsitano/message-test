@@ -44,6 +44,12 @@ export async function handler( event: any, context: Context ): Promise<void> {
 
         await Promise.all( messageList.map( async ( message: Message ): Promise<void> => {
             log.debug( message as any )
+
+            
+
+
+
+
             await deleteMessage( message )
         } ) )
 

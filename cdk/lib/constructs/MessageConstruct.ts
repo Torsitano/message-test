@@ -3,14 +3,11 @@ import { Duration } from 'aws-cdk-lib'
 import { Key } from 'aws-cdk-lib/aws-kms'
 import { BlockPublicAccess, Bucket, BucketEncryption, BucketProps } from 'aws-cdk-lib/aws-s3'
 import { Queue, QueueEncryption, QueueProps } from 'aws-cdk-lib/aws-sqs'
-//@ts-ignore
 import { SqsDestination } from 'aws-cdk-lib/aws-s3-notifications'
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
+import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs'
 import { Runtime } from 'aws-cdk-lib/aws-lambda'
 import { Rule, Schedule } from 'aws-cdk-lib/aws-events'
-//@ts-ignore
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
-//@ts-ignore
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
 
 export interface MessageConstructProps {
@@ -26,6 +23,9 @@ export interface MessageConstructProps {
      * 
      */
     processingLambdaCode: string,
+    /**
+     * 
+     */
     awsAccountId: string
 }
 
@@ -109,19 +109,22 @@ export class CustomMessageConstruct extends Construct {
         } )
 
 
-        // Increase memory and timeout as required for process
-        //@ts-ignore
-        const processingLambda = new NodejsFunction( this, 'processingLambda', {
-            entry: props.processingLambdaCode,
+        const lambdaDefaults: NodejsFunctionProps = {
             handler: 'handler',
             runtime: Runtime.NODEJS_16_X,
             memorySize: 128,
             bundling: {
                 sourceMap: true
             },
+            timeout: Duration.seconds( 30 )
+        }
+
+        // Increase memory and timeout as required for process
+        const processingLambda = new NodejsFunction( this, 'processingLambda', {
+            ...lambdaDefaults,
+            entry: props.processingLambdaCode,
             functionName: `${props.appName}-processing-lambda`,
             description: 'Processes objects put into the S3 Bucket for inbound payloads',
-            timeout: Duration.seconds( 10 ),
             environment: {
                 DEBUG_LOGS: 'true',
                 FAILURE_TEST: 'true',
@@ -139,16 +142,10 @@ export class CustomMessageConstruct extends Construct {
         sqsCmk.grantEncryptDecrypt( processingLambda.role! )
         messageQueue.grantConsumeMessages( processingLambda.role! )
 
-        //@ts-ignore
         const failureLambda = new NodejsFunction( this, 'failureLambda', {
+            ...lambdaDefaults,
             entry: './src/lambda/failedDelivery.ts',
-            handler: 'handler',
-            runtime: Runtime.NODEJS_16_X,
-            memorySize: 128,
-            bundling: {
-                sourceMap: true
-            },
-            functionName: `${props.appName}FailureLambda`,
+            functionName: `${props.appName}-failure-lambda`,
             description: 'Polls the failed queue to put S3 Objects into the failed Bucket for follow-up',
             environment: {
                 DL_QUEUE_URL: dlQueue.queueUrl,
@@ -156,9 +153,7 @@ export class CustomMessageConstruct extends Construct {
                 DEBUG_LOGS: 'true',
                 DELIVERY_BUCKET: deliveryBucket.bucketName,
                 REGION: 'us-east-1'
-            },
-            timeout: Duration.seconds( 30 )
-
+            }
         } )
 
         deliveryBucket.grantRead( failureLambda.role! )
@@ -168,7 +163,6 @@ export class CustomMessageConstruct extends Construct {
         dlQueue.grantConsumeMessages( failureLambda.role! )
 
         // Creates an Event Rule that triggers hourly to pull messages from the failure queue
-        //@ts-ignore
         const failureEventRule = new Rule( this, 'FailureLambdaTrigger', {
             ruleName: `${props.appName}FailureTrigger`,
             description: 'Triggers the failure lambda hourly to get messages from the failure queue',

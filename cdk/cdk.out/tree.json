@@ -678,7 +678,7 @@
                         "handler": "index.handler",
                         "memorySize": 128,
                         "runtime": "nodejs16.x",
-                        "timeout": 10
+                        "timeout": 30
                       }
                     },
                     "constructInfo": {
@@ -985,7 +985,7 @@
                             "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1"
                           }
                         },
-                        "functionName": "message-testFailureLambda",
+                        "functionName": "message-test-failure-lambda",
                         "handler": "index.handler",
                         "memorySize": 128,
                         "runtime": "nodejs16.x",

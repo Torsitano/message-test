@@ -491,7 +491,7 @@
     "Handler": "index.handler",
     "MemorySize": 128,
     "Runtime": "nodejs16.x",
-    "Timeout": 10
+    "Timeout": 30
    },
    "DependsOn": [
     "MessageDeploymentprocessingLambdaServiceRoleDefaultPolicyD7AA761F",
@@ -719,7 +719,7 @@
       "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1"
      }
     },
-    "FunctionName": "message-testFailureLambda",
+    "FunctionName": "message-test-failure-lambda",
     "Handler": "index.handler",
     "MemorySize": 128,
     "Runtime": "nodejs16.x",
