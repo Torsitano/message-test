@@ -152,7 +152,7 @@ export class CustomMessageConstruct extends Construct {
         } ) )
 
         // Granting permissions to the Processing Lambda IAM Role
-        this.deliveryBucket.grantRead( this.processingLambda.role! )
+        this.deliveryBucket.grantReadWrite( this.processingLambda.role! )
         this.s3Cmk.grantEncryptDecrypt( this.processingLambda.role! )
         this.sqsCmk.grantEncryptDecrypt( this.processingLambda.role! )
         this.messageQueue.grantConsumeMessages( this.processingLambda.role! )
