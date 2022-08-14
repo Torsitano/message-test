@@ -16,7 +16,9 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "@types/aws-lambda": "^8.10.102",
         "@types/jest": "^28.1.6",
+        "@types/lambda-log": "^2.2.1",
         "@types/node": "^18.7.2",
         "aws-cdk": "^2.37.1",
         "aws-cdk-lib": "^2.37.1",
@@ -28,9 +30,8 @@
         "typescript": "^4.7.4"
     },
     "dependencies": {
+        "@aws-sdk/client-s3": "^3.145.0",
         "@aws-sdk/client-sqs": "^3.145.0",
-        "@types/aws-lambda": "^8.10.102",
-        "@types/lambda-log": "^2.2.1",
         "lambda-log": "^3.1.0",
         "source-map-support": "^0.5.21"
     }
