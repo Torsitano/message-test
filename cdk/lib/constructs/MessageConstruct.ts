@@ -178,10 +178,10 @@ export class CustomMessageConstruct extends Construct {
         this.sqsCmk.grantEncryptDecrypt( this.failureLambda.role! )
         this.dlQueue.grantConsumeMessages( this.failureLambda.role! )
 
-        // Creates an Event Rule that triggers hourly to pull messages from the failure queue
+        // Creates an Event Rule that triggers the Lambda to pull messages from the failure queue
         this.failureEventRule = new Rule( this, 'FailureLambdaTrigger', {
             ruleName: `${props.appName}FailureTrigger`,
-            description: 'Triggers the failure lambda hourly to get messages from the failure queue',
+            description: 'Triggers the failure lambda to get messages from the failure queue',
             schedule: Schedule.rate( Duration.minutes( 1 ) )
         } )
 
