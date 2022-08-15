@@ -1,12 +1,19 @@
 {
   "language": "typescript",
-  "app": "npx ts-node main.ts",
+  "app": "npx ts-node ./lib/main.ts",
   "projectId": "5e876514-a30e-49ee-9382-50232f40ea94",
   "sendCrashReports": "true",
   "terraformProviders": [],
   "terraformModules": [],
   "context": {
     "excludeStackIdFromLogicalIds": "true",
-    "allowSepCharsInLogicalIds": "true"
+    "allowSepCharsInLogicalIds": "true",
+
+    "prod": {
+        "AwsAccountId": "698852667105",
+        "Environment": "Prod",
+        "Region": "us-east-1",
+        "AppName": "MessageTest"
+    }
   }
 }

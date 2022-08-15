@@ -3,5 +3,6 @@ import { MessageStack } from './stacks/MessageStack'
 
 
 const app = new App()
-new MessageStack( app, "messageStackCdkTf" )
+
+new MessageStack( app, "MessageStackCdkTf" )
 app.synth()
