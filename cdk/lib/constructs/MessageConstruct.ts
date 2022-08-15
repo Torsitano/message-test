@@ -181,7 +181,7 @@ export class CustomMessageConstruct extends Construct {
         this.failureEventRule = new Rule( this, 'FailureLambdaTrigger', {
             ruleName: `${props.appName}FailureTrigger`,
             description: 'Triggers the failure lambda to get messages from the failure queue',
-            schedule: Schedule.rate( Duration.minutes( 1 ) )
+            schedule: Schedule.rate( Duration.hours( 1 ) )
         } )
 
         this.failureEventRule.addTarget( new LambdaFunction( this.failureLambda ) )

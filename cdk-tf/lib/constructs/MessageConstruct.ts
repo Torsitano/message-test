@@ -216,6 +216,17 @@ export class CustomMessageConstruct extends Construct {
             blockPublicPolicy: true
         } )
 
+        new S3BucketNotification( this, 'CreateNotification', {
+            bucket: this.deliveryBucket.bucket,
+            queue: [ {
+                events: [
+                    's3:ObjectCreated:*'
+                ],
+                queueArn: this.messageQueue.arn
+            } ],
+
+        } )
+
         // Allows the Lambda IAM Role to be assumed by the service
         const lambdaTrustPolicy = {
             Version: '2012-10-17',
@@ -397,16 +408,7 @@ export class CustomMessageConstruct extends Construct {
             action: 'lambda:InvokeFunction'
         } )
 
-        new S3BucketNotification( this, 'CreateNotification', {
-            bucket: this.deliveryBucket.bucket,
-            queue: [ {
-                events: [
-                    's3:ObjectCreated:*'
-                ],
-                queueArn: this.messageQueue.arn
-            } ],
 
-        } )
 
 
     }
