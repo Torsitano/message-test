@@ -1,87 +1,60 @@
-import "cdktf/lib/testing/adapters/jest"; // Load types for expect matchers
-// import { Testing } from "cdktf";
 
-describe("My CDKTF Application", () => {
-  // The tests below are example tests, you can find more information at
-  // https://cdk.tf/testing
-  it.todo("should be tested");
+import { S3BucketServerSideEncryptionConfigurationA } from '@cdktf/provider-aws/lib/s3'
+import 'cdktf/lib/testing/adapters/jest' // Load types for expect matchers
+import { Testing } from 'cdktf'
+import { CustomMessageConstruct } from '../lib/constructs/MessageConstruct'
+import { SqsQueue } from '@cdktf/provider-aws/lib/sqs'
+import { MessageStack } from '../lib/stacks/MessageStack'
 
-  // // All Unit tests test the synthesised terraform code, it does not create real-world resources
-  // describe("Unit testing using assertions", () => {
-  //   it("should contain a resource", () => {
-  //     // import { Image,Container } from "./.gen/providers/docker"
-  //     expect(
-  //       Testing.synthScope((scope) => {
-  //         new MyApplicationsAbstraction(scope, "my-app", {});
-  //       })
-  //     ).toHaveResource(Container);
 
-  //     expect(
-  //       Testing.synthScope((scope) => {
-  //         new MyApplicationsAbstraction(scope, "my-app", {});
-  //       })
-  //     ).toHaveResourceWithProperties(Image, { name: "ubuntu:latest" });
-  //   });
-  // });
 
-  // describe("Unit testing using snapshots", () => {
-  //   it("Tests the snapshot", () => {
-  //     const app = Testing.app();
-  //     const stack = new TerraformStack(app, "test");
+describe( 'My CDKTF Application', () => {
 
-  //     new TestProvider(stack, "provider", {
-  //       accessKey: "1",
-  //     });
+    const template = Testing.synthScope( ( scope ) => {
+        new CustomMessageConstruct( scope, 'MessageDeployment', {
+            environment: 'Prod',
+            appName: 'MessageTestTf',
+            processingLambdaCode: './dist/processMessage/',
+            awsAccountId: '698852667105',
+            lambdaOverrides: {
+                memorySize: 256,
+                timeout: 60
+            }
+        } )
+    } )
 
-  //     new TestResource(stack, "test", {
-  //       name: "my-resource",
-  //     });
+    it( 'should have S3 encryption with KMS', () => {
+        expect( template ).toHaveResourceWithProperties( S3BucketServerSideEncryptionConfigurationA, {
+            rule: [ {
+                apply_server_side_encryption_by_default: {
+                    kms_master_key_id: '${aws_kms_key.MessageDeployment_S3Cmk_AA2B7668.id}',
+                    sse_algorithm: 'aws:kms'
+                },
+                bucket_key_enabled: true
+            } ]
+        } )
+    } )
 
-  //     expect(Testing.synth(stack)).toMatchSnapshot();
-  //   });
 
-  //   it("Tests a combination of resources", () => {
-  //     expect(
-  //       Testing.synthScope((stack) => {
-  //         new TestDataSource(stack, "test-data-source", {
-  //           name: "foo",
-  //         });
+    it( 'should have SQS encryption with KMS', () => {
+        expect( template ).toHaveResourceWithProperties( SqsQueue, {
+            kms_master_key_id: '${aws_kms_key.MessageDeployment_SqsCmk_2846ADEE.id}'
+        } )
+    } )
 
-  //         new TestResource(stack, "test-resource", {
-  //           name: "bar",
-  //         });
-  //       })
-  //     ).toMatchInlineSnapshot();
-  //   });
-  // });
+    it( 'should have DL queue on delivery queue', () => {
+        expect( template ).toHaveResourceWithProperties( SqsQueue, {
+            redrive_policy: '{"deadLetterTargetArn":"${aws_sqs_queue.MessageDeployment_DLQueue_B89DEAD6.arn}","maxReceiveCount":3}'
+        } )
+    } )
 
-  // describe("Checking validity", () => {
-  //   it("check if the produced terraform configuration is valid", () => {
-  //     const app = Testing.app();
-  //     const stack = new TerraformStack(app, "test");
+} )
 
-  //     new TestDataSource(stack, "test-data-source", {
-  //       name: "foo",
-  //     });
 
-  //     new TestResource(stack, "test-resource", {
-  //       name: "bar",
-  //     });
-  //     expect(Testing.fullSynth(app)).toBeValidTerraform();
-  //   });
-
-  //   it("check if this can be planned", () => {
-  //     const app = Testing.app();
-  //     const stack = new TerraformStack(app, "test");
-
-  //     new TestDataSource(stack, "test-data-source", {
-  //       name: "foo",
-  //     });
-
-  //     new TestResource(stack, "test-resource", {
-  //       name: "bar",
-  //     });
-  //     expect(Testing.fullSynth(app)).toPlanSuccessfully();
-  //   });
-  // });
-});
+describe( 'Checking validity', () => {
+    it( 'check if the produced terraform configuration is valid', () => {
+        const app = Testing.app()
+        const stack = new MessageStack( app, 'MessageStackCdkTf' )
+        expect( Testing.fullSynth( stack ) ).toBeValidTerraform()
+    } )
+} )
