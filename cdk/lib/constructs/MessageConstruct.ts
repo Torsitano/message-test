@@ -58,17 +58,17 @@ export class CustomMessageConstruct extends Construct {
             removalPolicy: RemovalPolicy.DESTROY
         }
 
-        // Create the CMK used to encrypt all resources this deploys
+        // Create the CMKs used to encrypt all resources this deploys
         this.s3Cmk = new Key( this, 'S3Cmk', {
             ...defaultKmsConfig,
             alias: `${props.appName}S3Cmk`,
-            description: 'KMS CMK used for message queue'
+            description: 'KMS CMK used for S3 Buckets'
         } )
 
         this.sqsCmk = new Key( this, 'SqsCmk', {
             ...defaultKmsConfig,
             alias: `${props.appName}SqsCmk`,
-            description: 'KMS CMK used for DL queue'
+            description: 'KMS CMK used for SQS Queues'
         } )
 
 
@@ -93,8 +93,7 @@ export class CustomMessageConstruct extends Construct {
                 queue: this.dlQueue,
                 maxReceiveCount: 3
             },
-            // Set visibility timeout to the timeout of the processing function + 30 seconds
-            visibilityTimeout: Duration.seconds( 30 ) //props.processingLambda.timeout!.plus( Duration.seconds( 30 ) )
+            visibilityTimeout: Duration.seconds( 30 )
         } )
 
 
