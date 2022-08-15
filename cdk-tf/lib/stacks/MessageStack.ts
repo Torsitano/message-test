@@ -16,15 +16,11 @@ export class MessageStack extends TerraformStack {
             environment: 'Prod',
             appName: 'MessageTestTf',
             processingLambdaCode: './dist/processMessage/',
-            awsAccountId: '698852667105'
-            // environment: buildConfig.environment,
-            // appName: buildConfig.appName,
-            // processingLambdaCode: './src/lambda/processMessage.ts',
-            // awsAccountId: buildConfig.awsAccountId,
-            // lambdaOverrides: {
-            //     memorySize: 256,
-            //     timeout: Duration.seconds( 60 )
-            // }
+            awsAccountId: '698852667105',
+            lambdaOverrides: {
+                memorySize: 256,
+                timeout: 60
+            }
         } )
 
         // define resources here

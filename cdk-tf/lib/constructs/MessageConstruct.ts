@@ -1,10 +1,9 @@
 import { Construct } from 'constructs'
 import { KmsAlias, KmsKey, KmsKeyConfig } from '@cdktf/provider-aws/lib/kms'
 import { SqsQueue, SqsQueueConfig } from '@cdktf/provider-aws/lib/sqs'
-import { S3Bucket, S3BucketServerSideEncryptionConfigurationA, S3BucketServerSideEncryptionConfigurationRuleA, S3Object } from '@cdktf/provider-aws/lib/s3'
+import { S3Bucket, S3BucketNotification, S3BucketServerSideEncryptionConfigurationA, S3BucketServerSideEncryptionConfigurationRuleA, S3Object } from '@cdktf/provider-aws/lib/s3'
 import { LambdaEventSourceMapping, LambdaFunction, LambdaFunctionConfig } from '@cdktf/provider-aws/lib/lambdafunction'
-//@ts-ignore
-import { CloudwatchEventRule } from '@cdktf/provider-aws/lib/eventbridge'
+import { CloudwatchEventRule, CloudwatchEventTarget } from '@cdktf/provider-aws/lib/eventbridge'
 import { AssetType, TerraformAsset } from 'cdktf'
 import { IamRole } from '@cdktf/provider-aws/lib/iam'
 
@@ -43,10 +42,53 @@ export class CustomMessageConstruct extends Construct {
     readonly lambdaRole: IamRole
     readonly processingLambda: LambdaFunction
     readonly failureLambda: LambdaFunction
-    //readonly failureEventRule: CloudwatchEventRule
+    readonly failureEventRule: CloudwatchEventRule
 
     constructor ( scope: Construct, name: string, props: MessageConstructProps ) {
         super( scope, name )
+
+        const sqsCmkPolicy = {
+            Version: '2012-10-17',
+            Statement: [
+                {
+                    Effect: 'Allow',
+                    Principal: {
+                        AWS: `arn:aws:iam::${props.awsAccountId}:root`
+                    },
+                    Action: 'kms:*',
+                    Resource: '*'
+                },
+                {
+                    Effect: 'Allow',
+                    Principal: {
+                        Service: 's3.amazonaws.com'
+                    },
+                    Action: [
+                        'kms:Decrypt',
+                        'kms:Encrypt',
+                        'kms:GenerateDataKey*',
+                        'kms:ReEncrypt*'
+                    ],
+                    Resource: '*',
+                    Condition: {
+                        ArnLike: {
+                            'aws:SourceArn': ( `arn:aws:s3:::${props.appName}-tf-lambda-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase()
+                        }
+                    }
+                },
+                {
+                    Effect: 'Allow',
+                    Principal: {
+                        Service: 's3.amazonaws.com'
+                    },
+                    Action: [
+                        'kms:Decrypt',
+                        'kms:GenerateDataKey*'
+                    ],
+                    Resource: '*'
+                }
+            ]
+        }
 
         // Create the CMKs used to encrypt all resources this deploys
         const defaultKmsConfig: Partial<KmsKeyConfig> = {
@@ -67,7 +109,8 @@ export class CustomMessageConstruct extends Construct {
 
         this.sqsCmk = new KmsKey( this, 'SqsCmk', {
             ...defaultKmsConfig,
-            description: 'KMS CMK used for SQS Queues'
+            description: 'KMS CMK used for SQS Queues',
+            policy: JSON.stringify( sqsCmkPolicy )
         } )
 
         new KmsAlias( this, 'SqsCmkAlias', {
@@ -89,6 +132,7 @@ export class CustomMessageConstruct extends Construct {
             messageRetentionSeconds: 21600
         } )
 
+        // The redrivePolicy property expects a JSON string
         const redrivePolicy = {
             deadLetterTargetArn: this.dlQueue.arn,
             maxReceiveCount: 3
@@ -114,15 +158,18 @@ export class CustomMessageConstruct extends Construct {
             bucket: ( `${props.appName}-delivery-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase()
         } )
 
+
+        this.failureBucket = new S3Bucket( this, 'FailureBucket', {
+            bucket: ( `${props.appName}-failed-delivery-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase(),
+        } )
+
+        // Terraform has deprecated including the encrytpion in the initial properties and
+        // recommends it be setup as another resource
         new S3BucketServerSideEncryptionConfigurationA( this, 'DeliveryEncryption', {
             bucket: this.deliveryBucket.bucket,
             rule: [
                 defaultBucketEncryptionConfig
             ]
-        } )
-
-        this.failureBucket = new S3Bucket( this, 'FailureBucket', {
-            bucket: ( `${props.appName}-failed-delivery-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase(),
         } )
 
         new S3BucketServerSideEncryptionConfigurationA( this, 'FailureEncryption', {
@@ -132,6 +179,7 @@ export class CustomMessageConstruct extends Construct {
             ]
         } )
 
+        // Allows the Lambda IAM Role to be assumed by the service
         const lambdaTrustPolicy = {
             Version: '2012-10-17',
             Statement: [
@@ -200,6 +248,7 @@ export class CustomMessageConstruct extends Construct {
             ]
         }
 
+        // This IAM Role is used by both Lambdas for simplicitiy
         this.lambdaRole = new IamRole( this, 'LambdaRole', {
             assumeRolePolicy: JSON.stringify( lambdaTrustPolicy ),
             managedPolicyArns: [
@@ -213,19 +262,14 @@ export class CustomMessageConstruct extends Construct {
             ]
         } )
 
+        // Used to store the Zip files for the Lambda code
         const lambdaUploadBucket = new S3Bucket( this, 'TerraformLambdaBucket', {
             bucket: ( `${props.appName}-tf-lambda-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase(),
         } )
 
-        const lambdaDefaults: Partial<LambdaFunctionConfig> = {
-            memorySize: 128,
-            s3Bucket: lambdaUploadBucket.bucket,
-            timeout: 30,
-            runtime: 'nodejs16.x'
-        }
-
+        // Zips and archives the files for Lambda
         const processingLambdaAsset = new TerraformAsset( this, 'ProcessingAsset', {
-            path: './dist/processMessage',
+            path: props.processingLambdaCode,
             type: AssetType.ARCHIVE
         } )
 
@@ -234,6 +278,25 @@ export class CustomMessageConstruct extends Construct {
             key: `${props.appName}-processing-${processingLambdaAsset.fileName}`,
             source: processingLambdaAsset.path
         } )
+
+        const failureLambdaAsset = new TerraformAsset( this, 'FailureAsset', {
+            path: './dist/failedDelivery',
+            type: AssetType.ARCHIVE
+        } )
+
+        const failureLambdaArchive = new S3Object( this, 'FailureArchive', {
+            bucket: lambdaUploadBucket.bucket,
+            key: `${props.appName}-failure-${failureLambdaAsset.fileName}`,
+            source: failureLambdaAsset.path
+        } )
+
+
+        const lambdaDefaults: Partial<LambdaFunctionConfig> = {
+            memorySize: 128,
+            s3Bucket: lambdaUploadBucket.bucket,
+            timeout: 30,
+            runtime: 'nodejs16.x'
+        }
 
         this.processingLambda = new LambdaFunction( this, 'ProcessingLambda', {
             ...lambdaDefaults,
@@ -258,16 +321,6 @@ export class CustomMessageConstruct extends Construct {
             batchSize: 1
         } )
 
-        const failureLambdaAsset = new TerraformAsset( this, 'FailureAsset', {
-            path: './dist/failedDelivery',
-            type: AssetType.ARCHIVE
-        } )
-
-        const failureLambdaArchive = new S3Object( this, 'FailureArchive', {
-            bucket: lambdaUploadBucket.bucket,
-            key: `${props.appName}-failure-${failureLambdaAsset.fileName}`,
-            source: failureLambdaAsset.path
-        } )
 
         this.failureLambda = new LambdaFunction( this, 'FailureLambda', {
             ...lambdaDefaults,
@@ -286,6 +339,30 @@ export class CustomMessageConstruct extends Construct {
                     REGION: 'us-east-1'
                 }
             }
+        } )
+
+
+        this.failureEventRule = new CloudwatchEventRule( this, 'FailureLambdaTrigger', {
+            name: `${props.appName}FailureTrigger`,
+            description: 'Triggers the failure lambda to get messages from the failure queue',
+            scheduleExpression: 'rate(1 minute)',
+            isEnabled: true
+        } )
+
+        new CloudwatchEventTarget( this, 'EventRuleTarget', {
+            arn: this.failureLambda.arn,
+            rule: this.failureEventRule.name
+        } )
+
+        new S3BucketNotification( this, 'CreateNotification', {
+            bucket: this.deliveryBucket.bucket,
+            queue: [ {
+                events: [
+                    's3:ObjectCreated:*'
+                ],
+                queueArn: this.messageQueue.arn
+            } ],
+            dependsOn: [ this.processingLambda ]
         } )
 
 
