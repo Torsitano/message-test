@@ -1,8 +1,9 @@
 import { Construct } from 'constructs'
 import { KmsAlias, KmsKey, KmsKeyConfig } from '@cdktf/provider-aws/lib/kms'
 import { SqsQueue, SqsQueueConfig } from '@cdktf/provider-aws/lib/sqs'
-import { S3Bucket, S3BucketNotification, S3BucketServerSideEncryptionConfigurationA, S3BucketServerSideEncryptionConfigurationRuleA, S3Object } from '@cdktf/provider-aws/lib/s3'
-import { LambdaEventSourceMapping, LambdaFunction, LambdaFunctionConfig } from '@cdktf/provider-aws/lib/lambdafunction'
+//@ts-ignore
+import { S3Bucket, S3BucketNotification, S3BucketPublicAccessBlock, S3BucketServerSideEncryptionConfigurationA, S3BucketServerSideEncryptionConfigurationRuleA, S3Object } from '@cdktf/provider-aws/lib/s3'
+import { LambdaEventSourceMapping, LambdaFunction, LambdaFunctionConfig, LambdaPermission } from '@cdktf/provider-aws/lib/lambdafunction'
 import { CloudwatchEventRule, CloudwatchEventTarget } from '@cdktf/provider-aws/lib/eventbridge'
 import { AssetType, TerraformAsset } from 'cdktf'
 import { IamRole } from '@cdktf/provider-aws/lib/iam'
@@ -72,7 +73,7 @@ export class CustomMessageConstruct extends Construct {
                     Resource: '*',
                     Condition: {
                         ArnLike: {
-                            'aws:SourceArn': ( `arn:aws:s3:::${props.appName}-tf-lambda-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase()
+                            'aws:SourceArn': ( `arn:aws:s3:::${props.appName}-delivery-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase()
                         }
                     }
                 },
@@ -132,6 +133,30 @@ export class CustomMessageConstruct extends Construct {
             messageRetentionSeconds: 21600
         } )
 
+
+        const messageQueuePolicy = {
+            Version: '2012-10-17',
+            Statement: [
+                {
+                    Effect: 'Allow',
+                    Principal: {
+                        Service: 's3.amazonaws.com'
+                    },
+                    Action: [
+                        'sqs:GetQueueAttributes',
+                        'sqs:GetQueueUrl',
+                        'sqs:SendMessage'
+                    ],
+                    Resource: `arn:aws:sqs:us-east-1:${props.awsAccountId}:${props.appName}MessageQueue${props.environment}`,
+                    Condition: {
+                        ArnLike: {
+                            'aws:SourceArn': ( `arn:aws:s3:::${props.appName}-delivery-bucket-${props.environment}-${props.awsAccountId}` ).toLowerCase()
+                        }
+                    }
+                }
+            ]
+        }
+
         // The redrivePolicy property expects a JSON string
         const redrivePolicy = {
             deadLetterTargetArn: this.dlQueue.arn,
@@ -142,7 +167,8 @@ export class CustomMessageConstruct extends Construct {
             ...defaultQueueConfig,
             name: `${props.appName}MessageQueue${props.environment}`,
             redrivePolicy: JSON.stringify( redrivePolicy ),
-            visibilityTimeoutSeconds: 30
+            visibilityTimeoutSeconds: 30,
+            policy: JSON.stringify( messageQueuePolicy )
         } )
 
         // Setup the default S3 Encryption config used by both Buckets
@@ -177,6 +203,17 @@ export class CustomMessageConstruct extends Construct {
             rule: [
                 defaultBucketEncryptionConfig
             ]
+        } )
+
+        // Block Public Access settings for both buckets
+        new S3BucketPublicAccessBlock( this, 'BPADeliveryBucket', {
+            bucket: this.deliveryBucket.bucket,
+            blockPublicPolicy: true
+        } )
+
+        new S3BucketPublicAccessBlock( this, 'BPAFailureBucket', {
+            bucket: this.failureBucket.bucket,
+            blockPublicPolicy: true
         } )
 
         // Allows the Lambda IAM Role to be assumed by the service
@@ -345,13 +382,19 @@ export class CustomMessageConstruct extends Construct {
         this.failureEventRule = new CloudwatchEventRule( this, 'FailureLambdaTrigger', {
             name: `${props.appName}FailureTrigger`,
             description: 'Triggers the failure lambda to get messages from the failure queue',
-            scheduleExpression: 'rate(1 minute)',
+            scheduleExpression: 'rate(1 hour)',
             isEnabled: true
         } )
 
         new CloudwatchEventTarget( this, 'EventRuleTarget', {
             arn: this.failureLambda.arn,
             rule: this.failureEventRule.name
+        } )
+
+        new LambdaPermission( this, 'EventRuleInvokeFailLambda', {
+            functionName: this.failureLambda.functionName,
+            principal: 'events.amazonaws.com',
+            action: 'lambda:InvokeFunction'
         } )
 
         new S3BucketNotification( this, 'CreateNotification', {
@@ -362,7 +405,7 @@ export class CustomMessageConstruct extends Construct {
                 ],
                 queueArn: this.messageQueue.arn
             } ],
-            dependsOn: [ this.processingLambda ]
+
         } )
 
 
