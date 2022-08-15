@@ -372,7 +372,6 @@ export class CustomMessageConstruct extends Construct {
 
         this.failureLambda = new LambdaFunction( this, 'FailureLambda', {
             ...lambdaDefaults,
-            ...props.lambdaOverrides,
             role: this.lambdaRole.arn,
             functionName: `${props.appName}FailureLambda`,
             description: 'Polls the failed queue to put S3 Objects into the failed Bucket for follow-up',
