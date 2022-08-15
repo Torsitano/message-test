@@ -1,4 +1,4 @@
-# Claim Check Serverless Object Processing Construct
+# Claim Check Serverless Object Processing Construct - CDK
 
 This is a demo repo for a serverless deployment for processing S3 Objects based on the [Claim Check](https://aws.plainenglish.io/an-introduction-to-claim-check-pattern-and-its-uses-b018649a380d) pattern.
 
