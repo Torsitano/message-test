@@ -21,7 +21,7 @@ The following resources are created by the custom construct:
 
 The primary purpose of this design is to process new objects uploaded to an S3 Bucket. When an object is uploaded, a message is sent to the Message Queue with information about the S3 object.
 
-The Message Queue triggers the Processing Lambda(using a custom constuct provided in CDK through [SqsEventSource](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_event_sources.SqsEventSource.html)), which will attempt to process the object.
+The Message Queue triggers the Processing Lambda, which will attempt to process the object.
 
 If the Processing Lambda fails 3 times, the Message Queue sends the message over to the DL Queue. The Failure Lambda runs on a scheduled basis as a cleanup function, and will check the DL Queue for messages. If it finds any, it copies the object to the Failure Bucket, deletes the object from the Delivery Bucket, and deletes the message from the DL Queue.
 
